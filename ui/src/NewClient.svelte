@@ -1,94 +1,72 @@
-<script>
-  import Fab, {Label, Icon} from '@smui/fab';
-  import Dialog, {Actions, InitialFocus} from '@smui/dialog';
-  import Textfield, {Input, Textarea} from '@smui/textfield';
-  import HelperText from '@smui/textfield/helper-text/index';
-  import Button, {Group, GroupItem} from '@smui/button';
-  import Paper, {Title, Subtitle, Content} from '@smui/paper';
-  import Switch from '@smui/switch';
-  import FormField from '@smui/form-field'
-  import Cookie from "cookie-universal";
-  import { onMount } from 'svelte';
-  import { link, navigate } from "svelte-routing";
+<script lang="ts">
+    import Fab, {Icon, Label} from '@smui/fab';
+    import Textfield from '@smui/textfield';
+    import HelperText from '@smui/textfield/helper-text';
+    import Button from '@smui/button';
+    import Switch from '@smui/switch';
+    import FormField from '@smui/form-field'
+    import Cookie from "cookie-universal";
+    import {navigate} from "svelte-routing";
+    import api, {type WGClientCreateForm} from "./lib/api.js"
 
-  const user = Cookie().get("wguser", { fromRes: true});
+    const user = Cookie().get("wguser", {fromRes: true});
 
-  let clientsUrl = "/api/v1/users/" + user + "/clients";
+    let client:WGClientCreateForm = {
+        generatePSK: false,
+        Name: "",
+        Notes: ""
+    };
 
-  let client = {};
-  let clientName = "";
-  let clientNotes = "";
-  let generatePSK = false;
-  let deleteDialog;
-
-  async function handleSubmit(event) {
-    client.Name = clientName;
-    client.Notes = clientNotes;
-    client.generatePSK = generatePSK;
-    const res = await fetch(clientsUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(client),
-    })
-      .then(response => {
-        return response.json();
-    })
-    .then(data => {
-      if (typeof data.Error != "undefined") {
-          console.log(data.Error);
-          alert(data.Error);
-      } else {
-        console.log("New client added", data);
-      }
-    });
-    navigate("/", { replace: true });
-  };
-
-
-  function handleBackClick(event) {
-    navigate("/", { replace: true });
-  }
+    const handleSubmit = async () => {
+        await api.create(user, client);
+        navigate("/", {replace: true});
+    };
 
 </script>
 
 <style>
-  .back {
-    position: fixed;
-    left: 10px;
-    top: 70px;
-  }
+    .back {
+        position: fixed;
+        left: 10px;
+        top: 70px;
+    }
 </style>
 
 <div class="back">
-<Fab color="primary" on:click={handleBackClick}><Icon class="material-icons">arrow_back</Icon></Fab>
+    <Fab color="primary" href="/">
+        <Icon class="material-icons">arrow_back</Icon>
+    </Fab>
 </div>
 
 <h3 class="mdc-typography--headline3"><small>Create New Device Configuration</small></h3>
 
 <div class="container">
+    <form on:submit|preventDefault={handleSubmit}>
 
-
-  <form on:submit|preventDefault={handleSubmit}>
-
-    <div class="margins">
-      <Textfield input$id="name" bind:value={clientName} variant="outlined" label="Client Name" input$aria-controls="client-name" input$aria-describedby="client-name-help" />
-      <HelperText id="client-name-help">Friendly name of client / device</HelperText>
-    </div>
-
-    <div class="margins">
-      <Textfield input$id="notes" fullwidth textarea bind:value={clientNotes} label="Label" input$aria-controls="client-notes" input$aria-describedby="client-notes-help" />
-      <HelperText id="client-notes-help">Notes about the client.</HelperText>
-    </div>
         <div class="margins">
-            <FormField  style="margin-bottom: 2em;">
-                <Switch bind:checked={generatePSK} />
+            <Textfield input$id="name" style="width: 100%;"
+                       helperLine$style="width: 100%;" bind:value={client.Name} variant="outlined" label="Client Name"
+                       aria-controls="client-name" aria-describedby="client-name-help">
+
+                <HelperText slot="helper" id="client-name-help">Friendly name of client / device</HelperText>
+            </Textfield>
+        </div>
+
+        <div class="margins">
+            <Textfield input$id="notes" style="width: 100%;"
+                       helperLine$style="width: 100%;" textarea bind:value={client.Notes} label="Label"
+                       aria-controls="client-notes" aria-describedby="client-notes-help">
+                <HelperText slot="helper" id="client-notes-help">Notes about the client.</HelperText>
+            </Textfield>
+        </div>
+        <div class="margins">
+            <FormField style="margin-bottom: 2em;">
+                <Switch bind:checked={client.generatePSK}/>
                 <span slot="label">Generate a Pre-shared Key</span>
             </FormField>
         </div>
-        
-    <Button variant="raised"><Label>Create</Label></Button>
-  </form>
+
+        <Button variant="raised"><Label>Create</Label></Button>
+    </form>
 </div>
 

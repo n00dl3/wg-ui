@@ -1,65 +1,62 @@
-<script>
-  import Button, {Group, GroupItem, Label} from '@smui/button';
-  import IconButton, {Icon} from '@smui/icon-button';
-  import Paper, {Title, Subtitle, Content} from '@smui/paper';
-  import { link,navigate } from "svelte-routing";
+<script lang="ts">
+    import Button, {Label} from '@smui/button';
+    import IconButton from '@smui/icon-button';
+    import Paper from '@smui/paper';
 
+    export let qrCodeURI: string;
+    export let configURI: string;
+    export let id: string;
+    export let name: string;
+    export let ip: string;
+    export let publicKey: string;
+    export let privateKey: string;
 
-  export let client;
-  export let user;
+    let hash = 0;
+    for (let i = 0; i < privateKey.length; i++) {
+        hash = privateKey.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const color = `hsl(${(hash % 360)},50%,95%)` ;
 
-  let clientId = client[0];
-  let dev = client[1];
-
-  var hash = 0;
-  for (var i = 0; i < dev.PrivateKey.length; i++) {
-    hash = dev.PrivateKey.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const color = "hsl(" + (hash % 360) + ",50%,95%)";
-
-  function onEdit() {
-    navigate("/client/" + clientId, { replace: true });
-  }
 </script>
 
 <style>
-  @media screen and (max-width: 800px) {
-    img {
-      display: none;
+    @media screen and (max-width: 800px) {
+        img {
+            display: none;
+        }
     }
-  }
 
-  img {
-    margin-right: 40px;
-    border: 1px solid #ccc;
-  }
+    img {
+        margin-right: 40px;
+        border: 1px solid #ccc;
+    }
 
-  .download {
-    margin-top: 2em;
-  }
+    .download {
+        margin-top: 2em;
+    }
 </style>
 
-<Paper elevation="8" style="background-color: {color}; margin: 2em 0;" class="card">
+<Paper elevation="{8}" style="background-color: {color}; margin: 2em 0;" class="card">
 
-  <div class="float-right">
-    <IconButton class="float-right material-icons" on:click={onEdit}>edit</IconButton>
-  </div>
+    <div class="float-right">
+        <IconButton class="float-right material-icons" href="/client/{id}">edit</IconButton>
+    </div>
 
 
-  <img src="/api/v1/users/{user}/clients/{clientId}?format=qrcode" class="qrcode float-right" alt="Mobile client config"/>
+    <img src="{qrCodeURI}" class="qrcode float-right" alt="Mobile client config"/>
 
-  <i class="material-icons" aria-hidden="true">devices</i>
-  <h3 class="mdc-typography--headline5">
-  {dev.Name}</h3>
+    <i class="material-icons" aria-hidden="true">devices</i>
+    <h3 class="mdc-typography--headline5">{name}</h3>
 
-  <dl>
-    <dt>IP</dt>
-    <dd>{dev.IP}</dd>
-    <dt>Public Key</dt>
-    <dd>{dev.PublicKey}</dd>
-  </dl>
+    <dl>
+        <dt>IP</dt>
+        <dd>{ip}</dd>
+        <dt>Public Key</dt>
+        <dd>{publicKey}</dd>
+    </dl>
 
-  <div class="download">
-    <Button  href="/api/v1/users/{user}/clients/{clientId}?format=config" variant="raised"><Label>Download Config</Label></Button>
-  </div>
+    <div class="download">
+        <Button href="{configURI}" variant="raised"><Label>Download
+            Config</Label></Button>
+    </div>
 </Paper>

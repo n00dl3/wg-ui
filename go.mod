@@ -27,6 +27,7 @@ require (
 	github.com/mdlayher/netlink v1.4.1 // indirect
 	github.com/mdlayher/socket v0.0.0-20211007213009-516dcbdf0267 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/rs/cors v1.11.0 // indirect
 	github.com/shogo82148/go-retry v1.1.1 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/net v0.0.0-20211008194852-3b03d305991f // indirect

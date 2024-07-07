@@ -1,63 +1,50 @@
 {
-    "name": "wireguard-ui",
-    "version": "1.0.0",
-    "description": "WireGuard VPN web UI",
-    "main": "index.js",
-    "scripts": {
-        "dev": "webpack-dev-server --mode=development --open --port 5000",
-        "build": "cross-env NODE_ENV=production webpack --mode=production --progress",
-        "test": "jest",
-        "prettier": "prettier --check ./src/**/*.{js,css,json,md}"
-    },
-    "author": "Daniel Lundin <daniel.lundin@embark-studios.com>",
-    "license": "ISC",
-    "dependencies": {
-        "cookie-universal": "^2.0.16"
-    },
-    "devDependencies": {
-        "@babel/cli": "^7.12.10",
-        "@babel/core": "^7.11.6",
-        "@babel/preset-env": "^7.11.5",
-        "@material/typography": "^3.1.0",
-        "@smui/button": "^1.0.0",
-        "@smui/dialog": "^1.0.0",
-        "@smui/fab": "^1.0.0",
-        "@smui/form-field": "^1.0.0",
-        "@smui/icon-button": "^1.0.0",
-        "@smui/paper": "^1.0.0",
-        "@smui/switch": "^1.0.0",
-        "@smui/textfield": "^1.0.0",
-        "@smui/top-app-bar": "^1.0.0",
-        "babel-jest": "^24.9.0",
-        "babel-loader": "^8.1.0",
-        "clean-webpack-plugin": "^3.0.0",
-        "cross-env": "^6.0.3",
-        "css-loader": "^3.6.0",
-        "html-webpack-plugin": "^3.2.0",
-        "husky": "^3.1.0",
-        "jest": "^24.9.0",
-        "lint-staged": "^9.5.0",
-        "mini-css-extract-plugin": "^0.8.2",
-        "node-sass": "^4.14.1",
-        "prettier": "^1.19.1",
-        "sass-loader": "^8.0.2",
-        "style-loader": "^1.2.1",
-        "svelte": "^3.25.0",
-        "svelte-loader": "^2.13.6",
-        "svelte-routing": "1.4.0",
-        "webpack": "^4.44.1",
-        "webpack-cli": "^3.3.12",
-        "webpack-dev-server": "^3.11.0"
-    },
-    "husky": {
-        "hooks": {
-            "pre-commit": "lint-staged"
-        }
-    },
-    "lint-staged": {
-        "*.{js,css,json,md}": [
-            "prettier --write",
-            "git add"
-        ]
+  "name": "wireguard-ui",
+  "version": "1.0.0",
+  "description": "WireGuard VPN web UI",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.node.json",
+    "prepare": "cd .. && husky ui/.husky"
+  },
+  "devDependencies": {
+    "@material/typography": "^14.0.0",
+    "@smui/button": "^7.0.0",
+    "@smui/dialog": "^7.0.0",
+    "@smui/fab": "^7.0.0",
+    "@smui/form-field": "^7.0.0",
+    "@smui/icon-button": "^7.0.0",
+    "@smui/paper": "^7.0.0",
+    "@smui/switch": "^7.0.0",
+    "@smui/textfield": "^7.0.0",
+    "@smui/top-app-bar": "^7.0.0",
+    "@sveltejs/vite-plugin-svelte": "^3.1.1",
+    "@tsconfig/svelte": "^5.0.4",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.7",
+    "prettier": "^3.3.2",
+    "svelte": "^4.2.18",
+    "svelte-check": "^3.8.1",
+    "svelte-routing": "^2.13.0",
+    "tslib": "^2.6.3",
+    "typescript": "^5.2.2",
+    "vite": "^5.3.1"
+  },
+  "dependencies": {
+    "cookie-universal": "^2.2.2"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
     }
+  },
+  "lint-staged": {
+    "*.{js,css,json,md,ts,svelte}": [
+      "prettier --write",
+      "git add"
+    ]
+  }
 }

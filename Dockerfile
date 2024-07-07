@@ -1,4 +1,4 @@
-FROM docker.io/node:12 AS ui
+FROM docker.io/node:22 AS ui
 WORKDIR /ui
 COPY ui/package.json ui/package-lock.json /ui/
 RUN npm install

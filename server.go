@@ -5,12 +5,11 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"github.com/rs/cors"
 	"io/fs"
 	"io/ioutil"
 	"net"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"path"
 	"regexp"
@@ -419,31 +418,21 @@ func (s *Server) Start() error {
 	router.DELETE("/api/v1/users/:user/clients/:client", s.withAuth(s.DeleteClient))
 	router.GET("/api/v1/users/:user/clients", s.withAuth(s.GetClients))
 	router.POST("/api/v1/users/:user/clients", s.withAuth(s.CreateClient))
-
+	log.Debug("Serving static assets embedded in binary")
+	router.GET("/about", s.Index)
+	router.GET("/client/:client", s.Index)
+	router.GET("/newclient", s.Index)
+	router.NotFound = s.assets
 	if *devUIServer != "" {
-		log.Debug("Serving static assets proxying from development server: ", *devUIServer)
-		devProxy := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			url, _ := url.Parse(*devUIServer)
-			if strings.HasPrefix(r.URL.Path, "/client/") || r.URL.Path == "/about" {
-				r.URL.Path = "/"
-			}
-			proxy := httputil.NewSingleHostReverseProxy(url)
-			r.URL.Host = url.Host
-			r.URL.Scheme = url.Scheme
-			r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
-			r.Host = url.Host
-			proxy.ServeHTTP(w, r)
-		})
-		router.NotFound = devProxy
-	} else {
-		log.Debug("Serving static assets embedded in binary")
-		router.GET("/about", s.Index)
-		router.GET("/client/:client", s.Index)
-		router.NotFound = s.assets
+		handler := cors.New(cors.Options{
+			AllowedOrigins:   []string{*devUIServer},
+			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+			AllowCredentials: true,
+			AllowedHeaders:   []string{"*"},
+		}).Handler(router)
+		return http.ListenAndServe(*listenAddr, s.basicAuth(s.userFromHeader(handler)))
 	}
-
 	log.WithField("listenAddr", *listenAddr).Info("Starting server")
-
 	return http.ListenAndServe(*listenAddr, s.basicAuth(s.userFromHeader(router)))
 }
 

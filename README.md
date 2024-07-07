@@ -99,11 +99,11 @@ export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
 export GOPATH=$HOME/go
 ```
 
-### Install LTS version of nodejs for frontend.
+### Install nodejs for frontend.
 
 ```
 sudo apt-get install curl software-properties-common
-curl -sL https://deb.nodesource.com/setup_12.x | sudo bash -
+curl -sL https://deb.nodesource.com/setup_22.x | sudo bash -
 sudo apt-get install nodejs
 ```
 
