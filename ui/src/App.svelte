@@ -2,19 +2,24 @@
     <title>WireGuard VPN</title>
 </svelte:head>
 
-<script>
+<script lang="ts">
     import About from "./About.svelte";
     import Clients from "./Clients.svelte";
     import EditClient from "./EditClient.svelte";
+    import { parseJwt } from "./lib/jwt";
     import Nav from "./Nav.svelte";
     import NewClient from "./NewClient.svelte";
 
     import Cookie from "cookie-universal";
     import {Route, Router} from "svelte-routing";
-
-    const cookies = Cookie();
-    export let user = cookies.get("wguser", {fromRes: true}) || "anonymous";
-
+    const cookie = Cookie().get("wguser", {fromRes: true});
+    export let user:string;
+    if(cookie){
+        const token = parseJwt<{user:string}>(cookie);
+        user = token.user;
+    }else{
+        user="anonymous";
+    }
     export let url = "";
 </script>
 

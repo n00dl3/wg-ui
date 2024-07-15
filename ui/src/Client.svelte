@@ -1,49 +1,28 @@
 <script lang="ts">
-    import Button, {Label} from '@smui/button';
-    import IconButton from '@smui/icon-button';
+    import Button, {Icon, Label} from '@smui/button';
     import Paper from '@smui/paper';
 
-    export let qrCodeURI: string;
-    export let configURI: string;
-    export let id: string;
     export let name: string;
     export let ip: string;
     export let publicKey: string;
-    export let privateKey: string;
 
     let hash = 0;
-    for (let i = 0; i < privateKey.length; i++) {
-        hash = privateKey.charCodeAt(i) + ((hash << 5) - hash);
+    for (let i = 0; i < publicKey.length; i++) {
+        hash = publicKey.charCodeAt(i) + ((hash << 5) - hash);
     }
     const color = `hsl(${(hash % 360)},50%,95%)` ;
-
 </script>
 
 <style>
-    @media screen and (max-width: 800px) {
-        img {
-            display: none;
-        }
-    }
-
-    img {
-        margin-right: 40px;
-        border: 1px solid #ccc;
-    }
-
     .download {
         margin-top: 2em;
+        text-align: right;
     }
 </style>
 
 <Paper elevation="{8}" style="background-color: {color}; margin: 2em 0;" class="card">
 
-    <div class="float-right">
-        <IconButton class="float-right material-icons" href="/client/{id}">edit</IconButton>
-    </div>
 
-
-    <img src="{qrCodeURI}" class="qrcode float-right" alt="Mobile client config"/>
 
     <i class="material-icons" aria-hidden="true">devices</i>
     <h3 class="mdc-typography--headline5">{name}</h3>
@@ -56,7 +35,6 @@
     </dl>
 
     <div class="download">
-        <Button href="{configURI}" variant="raised"><Label>Download
-            Config</Label></Button>
+        <Button href="/client/{publicKey}" variant="raised"><Label><Icon class="material-icons">edit</Icon>Edit</Label></Button>
     </div>
 </Paper>
