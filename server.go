@@ -71,7 +71,7 @@ func (c configRepository) Persist(config *vpn.ServerConfig) error {
 	return err
 }
 
-func (c configRepository) LoadServerConfig() (*vpn.ServerConfig, error) {
+func (c configRepository) Get() (*vpn.ServerConfig, error) {
 	var err error
 	var f *os.File
 	cfg, err := configFromArgs()
@@ -215,7 +215,7 @@ func runServer() {
 	cfgStorage := configRepository{
 		configPath: *dataDir + "/config.json",
 	}
-	cfg, err := cfgStorage.LoadServerConfig()
+	cfg, err := cfgStorage.Get()
 	if err != nil {
 		log.WithError(err).Error("Failed to load server config")
 		os.Exit(1)
@@ -226,7 +226,7 @@ func runServer() {
 	}
 	c, _ := configFromArgs()
 	cfg.MergeWith(*c)
-	vpnServer := vpn.NewServer(cfg, cfgStorage)
+	vpnServer := vpn.NewServer(cfg, cfgStorage, newPeerRepository())
 	if err = vpnServer.Start(); err != nil {
 		log.WithError(err).Error("Failed to start vpn server")
 		os.Exit(1)

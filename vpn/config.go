@@ -1,13 +1,11 @@
 package vpn
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
@@ -46,93 +44,6 @@ type ServerConfig struct {
 	LinkConfig        *LinkConfig
 	MaxClientsPerUser int
 	DefaultPeerMTU    MTU
-	Users             map[string]UserConfig
-}
-
-func (s *ServerConfig) getUser(userId string) UserConfig {
-	if _, ok := s.Users[userId]; !ok {
-		s.Users[userId] = make(UserConfig)
-	}
-	return s.Users[userId]
-}
-
-// GetClient returns a user's client configuration by its public key
-func (s *ServerConfig) GetClient(userId string, key wgtypes.Key) (*ClientConfig, error) {
-	user := s.getUser(userId)
-	return user.Get(key)
-}
-
-// AddClient adds a client configuration to the provided user
-func (s *ServerConfig) AddClient(userId string, allowedIPs []net.IPNet, pubKey wgtypes.Key,
-	psk wgtypes.Key, name string, mtu MTU, dns net.IP, keepalive int) (*ClientConfig, error) {
-	user := s.getUser(userId)
-	if s.MaxClientsPerUser > 0 {
-		count := user.Count()
-		if count >= s.MaxClientsPerUser {
-			log.Error(fmt.Errorf("user %q have too many configs %d", user, s.MaxClientsPerUser))
-			return nil, ErrTooManyClients
-		}
-	}
-	if name == "" {
-		log.Debugf("No clientName:using default: \"Unnamed Client\"")
-		name = "Unnamed Client"
-	}
-	ip, err := s.allocateIp()
-	if err != nil {
-		return nil, err
-	}
-	if err := mtu.Validate(); err != nil {
-		mtu = s.DefaultPeerMTU
-	}
-	client := &ClientConfig{
-		IP:           ip,
-		AllowedIPs:   allowedIPs,
-		PublicKey:    pubKey,
-		PresharedKey: psk,
-		Name:         name,
-		MTU:          mtu,
-		DNS:          dns,
-		KeepAlive:    keepalive,
-		Created:      time.Now(),
-		Modified:     time.Now(),
-	}
-	user.Add(client)
-	return client, nil
-}
-
-func (s *ServerConfig) allocateIp() (net.IP, error) {
-	allocated := make(map[string]bool)
-	allocated[s.LinkConfig.IP.String()] = true
-	clients := s.GetAllClients()
-	for _, dev := range clients {
-		allocated[dev.IP.String()] = true
-
-	}
-	serverIp := s.LinkConfig.IP
-	serverNet := s.LinkConfig.IPNet
-	for ip := serverIp.Mask(serverNet.Mask); serverNet.Contains(ip); {
-		for i := len(ip) - 1; i >= 0; i-- {
-			ip[i]++
-			if ip[i] > 0 {
-				break
-			}
-		}
-		if !allocated[ip.String()] {
-			log.Debug("Allocated IpNet: ", ip)
-			return ip, nil
-		}
-	}
-	return nil, ErrRangeExhausted
-}
-
-func (s *ServerConfig) RemoveClient(userId string, key wgtypes.Key) error {
-	user := s.getUser(userId)
-	return user.Remove(key)
-}
-
-func (s *ServerConfig) CountClients(userId string) int {
-	user := s.getUser(userId)
-	return user.Count()
 }
 
 // NewServerConfig creates a new server configuration
@@ -160,7 +71,6 @@ func NewServerConfig(
 			MTU:     linkConfig.MTU,
 			NATLink: linkConfig.NATLink,
 		},
-		Users: make(map[string]UserConfig),
 	}, nil
 }
 
@@ -191,100 +101,6 @@ func (s *ServerConfig) MergeWith(config ServerConfig) {
 		s.DefaultPeerMTU = config.DefaultPeerMTU
 	}
 
-}
-
-func (s *ServerConfig) GetAllClients() []*ClientConfig {
-	clients := make([]*ClientConfig, 0)
-	for _, user := range s.Users {
-		for _, client := range user {
-			clients = append(clients, client)
-		}
-	}
-	return clients
-}
-
-// ██╗   ██╗███████╗███████╗██████╗
-// ██║   ██║██╔════╝██╔════╝██╔══██╗
-// ██║   ██║███████╗█████╗  ██████╔╝
-// ██║   ██║╚════██║██╔══╝  ██╔══██╗
-// ╚██████╔╝███████║███████╗██║  ██║
-// ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝
-
-// UserConfig represents a user and its clients
-type UserConfig map[wgtypes.Key]*ClientConfig
-
-// Get returns a client configuration by its public key
-// @return *ClientConfig
-// @return error
-func (u UserConfig) Get(key wgtypes.Key) (*ClientConfig, error) {
-	if _, ok := u[key]; !ok {
-		return nil, ErrClientNotFound
-	}
-	return u[key], nil
-}
-
-// Add a client configuration to the current user
-func (u UserConfig) Add(client *ClientConfig) {
-	u[client.PublicKey] = client
-}
-
-// Remove a client configuration by its public key
-func (u UserConfig) Remove(key wgtypes.Key) error {
-	if _, ok := u[key]; !ok {
-		return ErrClientNotFound
-	}
-	delete(u, key)
-	return nil
-}
-
-// Count returns the number of clients for the current user
-func (u UserConfig) Count() int {
-	return len(u)
-}
-
-// List all clients for the current user
-func (u UserConfig) List() []*ClientConfig {
-	clients := make([]*ClientConfig, 0, len(u))
-	for _, client := range u {
-		clients = append(clients, client)
-	}
-	return clients
-}
-
-// MergeWith merges the current UserConfig with another UserConfig
-func (u UserConfig) MergeWith(config UserConfig) {
-	for key, client := range config {
-		if _, ok := u[key]; !ok {
-			u[key] = client
-		} else {
-			u[key].MergeWith(*client)
-		}
-	}
-}
-
-func (u UserConfig) MarshalJSON() ([]byte, error) {
-	clients := make(map[string]*ClientConfig)
-	for key, client := range u {
-		clients[key.String()] = client
-	}
-	return json.Marshal(clients)
-}
-
-func (u *UserConfig) UnmarshalJSON(data []byte) error {
-	clients := make(map[string]*ClientConfig)
-	if err := json.Unmarshal(data, &clients); err != nil {
-		return err
-	}
-	user := make(UserConfig)
-	for key, client := range clients {
-		k, err := wgtypes.ParseKey(key)
-		if err != nil {
-			return err
-		}
-		user[k] = client
-	}
-	*u = user
-	return nil
 }
 
 // ██╗     ██╗███╗   ██╗██╗  ██╗

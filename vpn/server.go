@@ -1,9 +1,12 @@
 package vpn
 
 import (
+	"errors"
+	"fmt"
 	"net"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/google/nftables"
 	"github.com/google/nftables/expr"
@@ -16,9 +19,10 @@ import (
 
 // Server is the running server
 type Server struct {
-	configStorage ConfigPersister
-	mutex         sync.RWMutex
-	Config        *ServerConfig
+	serverConfigRepo ServerConfigRepository
+	mutex            sync.RWMutex
+	Config           *ServerConfig
+	peerRepository   PeerConfigRepository
 }
 
 type wgLink struct {
@@ -40,11 +44,16 @@ func ifname(n string) []byte {
 }
 
 // NewServer returns an instance of Server which contains both the webserver and the reference to Wireguard
-func NewServer(cfg *ServerConfig, configStorage ConfigPersister) *Server {
+func NewServer(
+	cfg *ServerConfig,
+	serverConfigRepository ServerConfigRepository,
+	peerConfigRepository PeerConfigRepository,
+) *Server {
 	s := Server{
-		configStorage: configStorage,
-		Config:        cfg,
-		mutex:         sync.RWMutex{},
+		serverConfigRepo: serverConfigRepository,
+		peerRepository:   peerConfigRepository,
+		Config:           cfg,
+		mutex:            sync.RWMutex{},
 	}
 	return &s
 }
@@ -166,7 +175,7 @@ func (s *Server) initInterface() error {
 
 func (s *Server) reconfigure() {
 	log.Debug("Reconfiguring")
-	err := s.configStorage.Persist(s.Config)
+	err := s.serverConfigRepo.Persist(s.Config)
 	if err != nil {
 		// TODO: handle error
 		log.Fatal(err)
@@ -196,7 +205,10 @@ func (s *Server) configureWireGuard() error {
 	diffPeers := make([]wgtypes.PeerConfig, 0)
 
 	peers := make([]wgtypes.PeerConfig, 0)
-	clients := s.Config.GetAllClients()
+	clients, err := s.peerRepository.GetAllClients()
+	if err != nil {
+		return err
+	}
 	for id, dev := range clients {
 		allowedIPs := make([]net.IPNet, 1+len(dev.AllowedIPs))
 		allowedIPs[0] = *netlink.NewIPNet(dev.IP)
@@ -287,16 +299,20 @@ func (s *Server) GetClients(user string) ([]*ClientConfig, error) {
 	s.mutex.RLock()
 
 	defer s.mutex.RUnlock()
-	return s.Config.getUser(user).List(), nil
+	clients, err := s.peerRepository.ListClients(user)
+	if err != nil {
+		return nil, errors.Join(ErrCannotListClients, err)
+	}
+	return clients, err
 }
 
 // GetClient returns a specific client for the current user
 func (s *Server) GetClient(user string, publicKey wgtypes.Key) (*ClientConfig, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	client, err := s.Config.GetClient(user, publicKey)
+	client, err := s.peerRepository.GetClient(user, publicKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(ErrCannotGetClient, err)
 	}
 	return client, err
 }
@@ -308,8 +324,8 @@ func (s *Server) EditClient(user string, pubKey wgtypes.Key, allowedIPs []net.IP
 	defer s.mutex.Unlock()
 	var client *ClientConfig
 	var err error
-	if client, err = s.Config.GetClient(user, pubKey); err != nil {
-		return err
+	if client, err = s.peerRepository.GetClient(user, pubKey); err != nil {
+		return errors.Join(ErrCannotGetClient, err)
 	}
 	if err = client.Update(allowedIPs, psk, name, notes, mtu, dns, keepalive); err != nil {
 		return err
@@ -322,7 +338,7 @@ func (s *Server) EditClient(user string, pubKey wgtypes.Key, allowedIPs []net.IP
 func (s *Server) DeleteClient(user string, publicKey wgtypes.Key) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if err := s.Config.RemoveClient(user, publicKey); err != nil {
+	if err := s.peerRepository.RemoveClient(user, publicKey); err != nil {
 		return err
 	}
 	s.reconfigure()
@@ -336,10 +352,70 @@ func (s *Server) CreateClient(user string, allowedIPs []net.IPNet, pubKey wgtype
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	log.WithField("user", user).Debug("CreateClient")
-	client, err := s.Config.AddClient(user, allowedIPs, pubKey, psk, name, mtu, dns, keepalive)
+	if s.Config.MaxClientsPerUser > 0 {
+		count, err := s.peerRepository.Count(user)
+		if err != nil {
+			return nil, err
+		}
+		if count >= s.Config.MaxClientsPerUser {
+			log.Error(fmt.Errorf("user %s have too many configs %d", user, s.Config.MaxClientsPerUser))
+			return nil, ErrTooManyClients
+		}
+	}
+	if name == "" {
+		log.Debugf("No clientName:using default: \"Unnamed Client\"")
+		name = "Unnamed Client"
+	}
+	ip, err := s.allocateIp()
 	if err != nil {
+		return nil, err
+	}
+	if err := mtu.Validate(); err != nil {
+		mtu = s.Config.DefaultPeerMTU
+	}
+	client := &ClientConfig{
+		IP:           ip,
+		AllowedIPs:   allowedIPs,
+		PublicKey:    pubKey,
+		PresharedKey: psk,
+		Name:         name,
+		MTU:          mtu,
+		DNS:          dns,
+		KeepAlive:    keepalive,
+		Created:      time.Now(),
+		Modified:     time.Now(),
+	}
+	if err = s.peerRepository.AddClient(user, client); err != nil {
 		return nil, err
 	}
 	s.reconfigure()
 	return client, nil
+}
+
+func (s *Server) allocateIp() (net.IP, error) {
+	allocated := make(map[string]bool)
+	allocated[s.Config.LinkConfig.IP.String()] = true
+	clients, err := s.peerRepository.GetAllClients()
+	if err != nil {
+		return nil, err
+	}
+	for _, dev := range clients {
+		allocated[dev.IP.String()] = true
+
+	}
+	serverIp := s.Config.LinkConfig.IP
+	serverNet := s.Config.LinkConfig.IPNet
+	for ip := serverIp.Mask(serverNet.Mask); serverNet.Contains(ip); {
+		for i := len(ip) - 1; i >= 0; i-- {
+			ip[i]++
+			if ip[i] > 0 {
+				break
+			}
+		}
+		if !allocated[ip.String()] {
+			log.Debug("Allocated IpNet: ", ip)
+			return ip, nil
+		}
+	}
+	return nil, ErrRangeExhausted
 }
