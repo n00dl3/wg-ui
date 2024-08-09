@@ -36,6 +36,7 @@ type Client struct {
 	Server     ServerConfig
 	Dns        net.IP
 	AllowedIPs []net.IPNet
+	PrivateKey vpn.CipheredKey
 	PubKey     wgtypes.Key
 	Psk        wgtypes.Key
 	Name       string
@@ -57,6 +58,7 @@ func newClientResponse(c *vpn.ClientConfig, s *vpn.ServerConfig) Client {
 		Dns:        c.DNS,
 		AllowedIPs: c.AllowedIPs,
 		PubKey:     c.PublicKey,
+		PrivateKey: c.PrivateKey,
 		Psk:        c.PresharedKey,
 		Name:       c.Name,
 		Mtu:        int(c.MTU),
@@ -78,9 +80,20 @@ func parseClientPayload(req *http.Request) (Client, error) {
 
 var (
 	ErrInvalidPublicKey  = errors.New("invalid public key")
+	ErrInvalidPrivateKey = errors.New("invalid private key")
 	ErrInvalidPSK        = errors.New("invalid preshared key")
 	ErrInvalidAllowedIps = errors.New("invalid allowed IPs")
 )
+
+func parsePrivateKey(key string) (vpn.CipheredKey, error) {
+	var privateKey vpn.CipheredKey
+	decoded, err := hex.DecodeString(key)
+	if err != nil {
+		return privateKey, err
+	}
+	copy(privateKey[:], decoded)
+	return privateKey, nil
+}
 
 func (c *Client) UnmarshalJSON(data []byte) error {
 	var (
@@ -99,6 +112,13 @@ func (c *Client) UnmarshalJSON(data []byte) error {
 	publicKey, err := parseHexKey(m["publicKey"].(string))
 	if err != nil {
 		errors.Join(ErrInvalidPublicKey, err)
+	}
+	if _, ok := m["privateKey"].(string); !ok {
+		return ErrInvalidPrivateKey
+	}
+	privateKey, err := parsePrivateKey(m["privateKey"].(string))
+	if err != nil {
+		return errors.Join(ErrInvalidPrivateKey, err)
 	}
 	if _, ok := m["psk"].(string); ok {
 		if psk, err = parseHexKey(m["psk"].(string)); err != nil {
@@ -137,6 +157,7 @@ func (c *Client) UnmarshalJSON(data []byte) error {
 	}
 	*c = Client{
 		PubKey:     publicKey,
+		PrivateKey: privateKey,
 		Psk:        psk,
 		Name:       name,
 		Dns:        dnsIP,
@@ -155,6 +176,7 @@ func (c Client) MarshalJSON() ([]byte, error) {
 	data := map[string]interface{}{
 		"ip":         c.IP.String(),
 		"publicKey":  hex.EncodeToString(c.PubKey[:]),
+		"privateKey": hex.EncodeToString(c.PrivateKey[:]),
 		"name":       c.Name,
 		"dns":        c.Dns.String(),
 		"mtu":        c.Mtu,

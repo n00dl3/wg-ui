@@ -6,13 +6,14 @@
     import Switch from "@smui/switch";
     import FormField from "@smui/form-field";
     import Cookie from "cookie-universal";
-    import {navigate} from "svelte-routing";
+    import { navigate} from "svelte-routing";
     import api, {type WGClientCreateForm} from "./lib/api.js";
     import {parseJwt} from "./lib/jwt.js";
     import {generatePresharedKey, generatePrivateKey, generatePublicKey, keyToHex} from "./lib/keygen.js";
     import Dialog, {Actions, Content, Header, Title} from "@smui/dialog";
     import {generateConfig, getQrcodeConfig} from "./lib/config.js";
     import QRCode from "qrcode";
+    import Cipher from "./lib/master-key.js";
 
     let qrCodeUri: string;
     let showDialog = false;
@@ -34,6 +35,7 @@
             name: client.Name,
             notes: client.Notes,
             publicKey: keyToHex(publicKey),
+            privateKey:keyToHex(await Cipher.encrypt(privateKey)),
             psk: psk?.length ? keyToHex(psk) : undefined,
             allowedIPs: [],
         };
@@ -59,7 +61,7 @@
 </script>
 
 <div class="back">
-    <Fab color="primary" href="/">
+    <Fab on:click$preventDefault={() => navigate(`/${window.location.hash}`)} href="/{window.location.hash}" color="primary">
         <Icon class="material-icons">arrow_back</Icon>
     </Fab>
 </div>
@@ -106,7 +108,7 @@
 
         <Button variant="raised"><Label>Create</Label></Button>
     </form>
-    <Dialog open={showDialog} on:SMUIDialog:closed={() => navigate("/", {replace: true})}>
+    <Dialog open={showDialog} on:SMUIDialog:closed={() => navigate(`/${window.location.hash}`, {replace: true})}>
         <Header>
             <Title>Device created</Title>
         </Header>

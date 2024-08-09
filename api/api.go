@@ -310,6 +310,7 @@ func (s *Server) CreateClient(w http.ResponseWriter, r *http.Request, ps httprou
 	if c, err = s.vpnServer.CreateClient(
 		user,
 		client.AllowedIPs,
+		client.PrivateKey,
 		client.PubKey,
 		client.Psk,
 		client.Name,

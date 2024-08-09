@@ -12,6 +12,8 @@
     import {navigate} from "svelte-routing";
     import {convertNETIPToTextCIDRs, convertTextCIDRsToNETIP} from "./lib/ip";
     import {parseJwt} from "./lib/jwt";
+    import Cipher from "./lib/master-key";
+    import { keyFromHex, keyToHex } from "./lib/keygen";
 
     export let clientId: string;
 
@@ -26,12 +28,21 @@
         mtu: 0,
         ip: "",
         publicKey: "",
+        privateKey: "",
         psk: "",
+        dns: "",
+        keepAlive: 0,
+        server: {
+            endpoint: "",
+            publicKey: "",
+            allowedIPs: [],
+        },
     };
     let clientName = "";
     let clientNotes = "";
     let allowedIPsText = "";
     let openDeleteDialog: boolean = false;
+    let privateKey: string = "";
 
     async function getClient() {
         const c = await api.get(user, decodeURIComponent(clientId));
@@ -40,6 +51,7 @@
         client = c;
         allowedIPsText = (c.allowedIps || []).join("\n");
         console.log("Fetched client", client);
+        privateKey = keyToHex(await Cipher.decrypt(keyFromHex(client.privateKey)));
     }
 
     async function handleSubmit(event: Event) {
@@ -51,7 +63,7 @@
             return CIDR_REGEX.test(cidr);
         });
         client = await api.update(user, client.publicKey, client);
-        navigate("/", {replace: true});
+        navigate(`/${window.location.hash}`, {replace: true});
         console.log("Saved changes", client);
     }
 
@@ -59,7 +71,7 @@
         switch (e.detail.action) {
             case "delete":
                 await api.delete(user, client.publicKey);
-                navigate("/", {replace: true});
+                navigate(`/${window.location.hash}`, {replace: true});
                 break;
             default:
                 break;
@@ -70,7 +82,7 @@
 </script>
 
 <div class="back">
-    <Fab color="primary" href="/">
+    <Fab on:click$preventDefault={()=>navigate(`/${window.location.hash}`)} tag="a" color="primary" href="/{window.location.hash}">
         <Icon class="material-icons">arrow_back</Icon>
     </Fab>
 </div>
@@ -133,7 +145,7 @@
         <dt>IP Address</dt>
         <dd>{client.ip}</dd>
         <dt>Private Key</dt>
-        <dd>{client.privateKey}</dd>
+        <dd>{privateKey}</dd>
         <dt>Public key</dt>
         <dd>{client.publicKey}</dd>
         <dt>Preshared Key</dt>

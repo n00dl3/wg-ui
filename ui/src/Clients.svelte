@@ -4,6 +4,7 @@
     import {onMount} from "svelte";
     import Client from "./Client.svelte";
     import api, {type WGClient} from "./lib/api";
+    import { navigate } from "svelte-routing";
 
     export let user: string;
     let clients: [string, WGClient][] = [];
@@ -37,11 +38,11 @@
 </div>
 
 {#each clients as [id, dev]}
-    <Client {user} {id} ip={dev.ip} name={dev.name} publicKey={dev.publicKey} />
+    <Client peerConfig={dev} />
 {/each}
 
 <div class="newClient">
-    <Fab color="primary" href="/newclient">
+    <Fab tag="a" on:click$preventDefault={()=>navigate(`/newclient${window.location.hash}`)} href="/newclient{window.location.hash}" color="primary">
         <Icon class="material-icons">add</Icon>
     </Fab>
 </div>

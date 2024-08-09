@@ -5,12 +5,13 @@ export interface WGClientCreateForm {
     notes?: string;
     allowedIPs: string[];
     publicKey: string;
+    privateKey: string;
     psk?: string;
     mtu?: number;
 }
 
 export interface WGServer {
-    alowedIPs: string[];
+    allowedIPs: string[];
     endpoint: string;
     publicKey: string;
 }
@@ -22,6 +23,7 @@ export interface WGClient {
     name: string;
     psk: string;
     publicKey: string;
+    privateKey: string;
     server: WGServer;
     keepAlive: number;
     notes: string;

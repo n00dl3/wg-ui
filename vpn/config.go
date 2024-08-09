@@ -26,6 +26,7 @@ var (
 	ErrInvalidPublicKey  = fmt.Errorf("%e: invalid public key", ErrValidationError)
 	ErrInvalidIP         = fmt.Errorf("%e: invalid IP", ErrValidationError)
 	ErrInvalidKeepalive  = fmt.Errorf("%e: invalid KeepAlive", ErrValidationError)
+	ErrInvalidPrivateKey = fmt.Errorf("%e: invalid private key", ErrValidationError)
 )
 
 // ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗
@@ -165,12 +166,15 @@ func (mtu MTU) Validate() error {
 	return nil
 }
 
+type CipheredKey [60]byte
+
 // ClientConfigRepository is an interface for the client configuration repository
 type ClientConfig struct {
 	IP           net.IP
 	AllowedIPs   []net.IPNet
 	PublicKey    wgtypes.Key
 	PresharedKey wgtypes.Key
+	PrivateKey   CipheredKey
 	Name         string
 	Notes        string
 	MTU          MTU
@@ -200,7 +204,9 @@ func (c *ClientConfig) Validate() error {
 	if c.KeepAlive < 0 {
 		return ErrInvalidKeepalive
 	}
-
+	if c.PrivateKey == (CipheredKey{}) {
+		return ErrInvalidPrivateKey
+	}
 	return nil
 }
 
@@ -228,6 +234,9 @@ func (c *ClientConfig) MergeWith(config ClientConfig) {
 	}
 	if config.PublicKey != (wgtypes.Key{}) {
 		c.PublicKey = config.PublicKey
+	}
+	if config.PrivateKey != (CipheredKey{}) {
+		c.PrivateKey = config.PrivateKey
 	}
 	if config.PresharedKey != (wgtypes.Key{}) {
 		c.PresharedKey = config.PresharedKey

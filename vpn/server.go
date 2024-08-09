@@ -347,7 +347,7 @@ func (s *Server) DeleteClient(user string, publicKey wgtypes.Key) error {
 }
 
 // CreateClient creates a new client for the current user
-func (s *Server) CreateClient(user string, allowedIPs []net.IPNet, pubKey wgtypes.Key,
+func (s *Server) CreateClient(user string, allowedIPs []net.IPNet, privateKey CipheredKey, pubKey wgtypes.Key,
 	psk wgtypes.Key, name string, mtu MTU, dns net.IP, keepalive int) (*ClientConfig, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -377,6 +377,7 @@ func (s *Server) CreateClient(user string, allowedIPs []net.IPNet, pubKey wgtype
 		IP:           ip,
 		AllowedIPs:   allowedIPs,
 		PublicKey:    pubKey,
+		PrivateKey:   privateKey,
 		PresharedKey: psk,
 		Name:         name,
 		MTU:          mtu,

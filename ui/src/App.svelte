@@ -7,12 +7,26 @@
     import Clients from "./Clients.svelte";
     import EditClient from "./EditClient.svelte";
     import { parseJwt } from "./lib/jwt";
+    import Cipher from "./lib/master-key";
     import Nav from "./Nav.svelte";
     import NewClient from "./NewClient.svelte";
 
     import Cookie from "cookie-universal";
     import {Route, Router} from "svelte-routing";
     const cookie = Cookie().get("wguser", {fromRes: true});
+    if(window.location.hash){
+        const password=prompt("Please provide the password to unlock the master key", "")||"";
+        Cipher.unlock(window.location.hash.substring(1),password).then(()=>console.log("key unlocked !"))
+    }else{
+        const password=prompt("A new master key will be generated, please provide a password to encrypt it", "");
+        if(!password){
+            throw new Error("No password provided");
+        }
+        Cipher.init(password).then((key)=>{
+            window.location.hash=key;
+        });
+
+    }
     export let user:string;
     if(cookie){
         const token = parseJwt<{user:string}>(cookie);
@@ -41,9 +55,9 @@
 
         <main class="container">
             <div>
-                <Route path="client/:clientId" component="{EditClient}"/>
+                <Route path="client/:clientId" component="{EditClient}" />
                 <Route path="newclient/" component="{NewClient}"/>
-                <Route path="about" component="{About}"/>
+                <Route path="about" component="{About}" />
                 <Route path="/">
                     <Clients user="{user}"/>
                 </Route>
