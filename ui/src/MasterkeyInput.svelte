@@ -2,13 +2,18 @@
     import Button from "@smui/button";
     import Textfield from "@smui/textfield";
     import Cipher from "./lib/master-key";
+    import {CipherException} from "./lib/master-key.js";
 
     let passphrase = "";
     let encryptionKey = "";
 
     function handleSubmit(e:Event) {
         e.preventDefault();
-
+        if (Cipher.wrappedKey) {
+            Cipher.unlock(window.location.hash.substring(1), passphrase);
+        } else {
+            Cipher.init(passphrase);
+        }
         Cipher.unlock(window.location.hash.substring(1), passphrase).then((key) => {
             
         });
@@ -16,28 +21,24 @@
     }
 </script>
 
-<main>
-    {#if Cipher.wrappedKey}
+<div class="master-key-unlock">
     <form on:submit={handleSubmit}>
+    {#if Cipher.wrappedKey}
         <p>Enter your passphrase to unlock the master key</p>
-        <Textfield
-        label="Passphrase"
-        type="password"
-        value={passphrase}
-        on:input={(event) => (passphrase = event?.target.value)}
-        />
-        
-        <Button type="submit">Unlock Key</Button>
-        
-    </form>
     {:else}
-    <p>Master key is not set</p>
+        <p>Master key is not set, a new key will be generated, please provide a passphrase for the newly generated key</p>
     {/if}
-    
-</main>
+        <Textfield
+            label="Passphrase"
+            type="password"
+            bind:value={passphrase}
+        />
+        <Button type="submit">{Cipher.wrappedKey?'Unlock Key':'Generate key'}</Button>
+    </form>
+</div>
 
 <style>
-    main {
+    .master-key-unlock {
         display: flex;
         flex-direction: column;
         align-items: center;

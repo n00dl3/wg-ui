@@ -131,6 +131,10 @@ export class Cipherer {
         }
         throw new CipherException("Master key not initialized");
     }
+
+    isUnlocked():boolean{
+        return !!this.masterKey;
+    }
 }
 
 const Cipher = new Cipherer();
