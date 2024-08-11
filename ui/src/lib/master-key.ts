@@ -1,4 +1,4 @@
-import {keyToHex} from "./keygen";
+import {keyFromHex, keyToHex} from "./keygen";
 
 const SALT_BYTE_SIZE = 16;
 const IV_BYTE_SIZE = 12;
@@ -102,8 +102,8 @@ export class Cipherer {
     async unlock(key: string = "", passphrase: string = "") {
         if (key != "" && passphrase != "") {
             const enc = new TextEncoder();
-            this.masterKey = await unlockMasterKey(enc.encode(passphrase), enc.encode(key));
-            this._wrappedKey = enc.encode(key);
+            this._wrappedKey = keyFromHex(key);
+            this.masterKey = await unlockMasterKey(enc.encode(passphrase), this._wrappedKey);
         }
     }
 
@@ -115,6 +115,7 @@ export class Cipherer {
         const enc = new TextEncoder();
         const key = await generateMasterKey(enc.encode(passphrase));
         this.masterKey = await unlockMasterKey(enc.encode(passphrase), key);
+        this._wrappedKey = key;
         return keyToHex(key);
     }
 

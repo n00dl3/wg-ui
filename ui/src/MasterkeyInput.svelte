@@ -3,37 +3,35 @@
     import Textfield from "@smui/textfield";
     import Cipher from "./lib/master-key";
     import {CipherException} from "./lib/master-key.js";
+    import {createEventDispatcher} from "svelte";
 
     let passphrase = "";
     let encryptionKey = "";
+    const wrappedKey=window.location.hash.substring(1);
+    const dispatch = createEventDispatcher();
 
-    function handleSubmit(e:Event) {
+    function handleSubmit(e: Event) {
         e.preventDefault();
-        if (Cipher.wrappedKey) {
-            Cipher.unlock(window.location.hash.substring(1), passphrase);
+        if (wrappedKey) {
+            Cipher.unlock(wrappedKey, passphrase).then((k) => dispatch("unlock",k));
         } else {
-            Cipher.init(passphrase);
+            Cipher.init(passphrase).then((k) => dispatch("unlock",k));
         }
-        Cipher.unlock(window.location.hash.substring(1), passphrase).then((key) => {
-            
-        });
-        
     }
 </script>
 
 <div class="master-key-unlock">
     <form on:submit={handleSubmit}>
-    {#if Cipher.wrappedKey}
-        <p>Enter your passphrase to unlock the master key</p>
-    {:else}
-        <p>Master key is not set, a new key will be generated, please provide a passphrase for the newly generated key</p>
-    {/if}
-        <Textfield
-            label="Passphrase"
-            type="password"
-            bind:value={passphrase}
-        />
-        <Button type="submit">{Cipher.wrappedKey?'Unlock Key':'Generate key'}</Button>
+        {#if wrappedKey}
+            <p>Enter your passphrase to unlock the master key</p>
+        {:else}
+            <p>
+                Master key is not set, a new key will be generated, please provide a passphrase for the newly generated
+                key
+            </p>
+        {/if}
+        <Textfield label="Passphrase" type="password" bind:value={passphrase} />
+        <Button type="submit">{wrappedKey ? "Unlock Key" : "Generate key"}</Button>
     </form>
 </div>
 

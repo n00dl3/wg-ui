@@ -6,7 +6,7 @@
     import Switch from "@smui/switch";
     import FormField from "@smui/form-field";
     import Cookie from "cookie-universal";
-    import { navigate} from "svelte-routing";
+    import {navigate} from "svelte-routing";
     import api, {type WGClientCreateForm} from "./lib/api.js";
     import {parseJwt} from "./lib/jwt.js";
     import {generatePresharedKey, generatePrivateKey, generatePublicKey, keyToHex} from "./lib/keygen.js";
@@ -31,11 +31,12 @@
         const privateKey = generatePrivateKey();
         const publicKey = generatePublicKey(privateKey);
         const psk = client.generatePSK ? generatePresharedKey() : undefined;
+
         const c: WGClientCreateForm = {
             name: client.Name,
             notes: client.Notes,
             publicKey: keyToHex(publicKey),
-            privateKey:keyToHex(await Cipher.encrypt(privateKey)),
+            privateKey: keyToHex(await Cipher.encrypt(privateKey)),
             psk: psk?.length ? keyToHex(psk) : undefined,
             allowedIPs: [],
         };
@@ -61,7 +62,11 @@
 </script>
 
 <div class="back">
-    <Fab on:click$preventDefault={() => navigate(`/${window.location.hash}`)} href="/{window.location.hash}" color="primary">
+    <Fab
+        on:click$preventDefault={() => navigate(`/${window.location.hash}`)}
+        href="/{window.location.hash}"
+        color="primary"
+    >
         <Icon class="material-icons">arrow_back</Icon>
     </Fab>
 </div>

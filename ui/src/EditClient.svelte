@@ -6,6 +6,7 @@
     import Button from "@smui/button";
     import {Content, Title} from "@smui/paper";
     import api, {type WGClient} from "./lib/api";
+    import LayoutGrid, {Cell} from "@smui/layout-grid";
 
     import Cookie from "cookie-universal";
     import {onMount} from "svelte";
@@ -13,7 +14,8 @@
     import {convertNETIPToTextCIDRs, convertTextCIDRsToNETIP} from "./lib/ip";
     import {parseJwt} from "./lib/jwt";
     import Cipher from "./lib/master-key";
-    import { keyFromHex, keyToHex } from "./lib/keygen";
+    import {keyFromHex, keyToHex} from "./lib/keygen";
+    import TopAppBar from "@smui/top-app-bar";
 
     export let clientId: string;
 
@@ -81,62 +83,74 @@
     onMount(getClient);
 </script>
 
-<div class="back">
-    <Fab on:click$preventDefault={()=>navigate(`/${window.location.hash}`)} tag="a" color="primary" href="/{window.location.hash}">
-        <Icon class="material-icons">arrow_back</Icon>
-    </Fab>
-</div>
-
-<h3 class="mdc-typography--headline3">Client Properties <small class="text-muted">({client.name})</small></h3>
-
 <div class="container">
-    <form on:submit|preventDefault={handleSubmit}>
-        <div class="margins">
-            <Textfield
-                input$id="name"
-                bind:value={clientName}
-                variant="outlined"
-                label="Client Name"
-                aria-controls="client-name"
-                aria-describedby="client-name-help"
-                style="width: 100%;"
-                helperLine$style="width: 100%;"
+    <TopAppBar title="Client Properties" />
+    <LayoutGrid>
+        <Cell span={1}>
+            <Fab
+                on:click$preventDefault={() => navigate(`/${window.location.hash}`)}
+                tag="a"
+                color="primary"
+                href="/{window.location.hash}"
             >
-                <HelperText id="client-name-help" slot="helper">Friendly name of client / device</HelperText>
-            </Textfield>
-        </div>
+                <Icon class="material-icons">arrow_back</Icon>
+            </Fab>
+        </Cell>
+        <Cell span={11}>
+            <h3 class="mdc-typography--headline3">
+                Client Properties <small class="text-muted">({client.name})</small>
+            </h3>
+        </Cell>
+        <Cell span={12}>
+            <form on:submit|preventDefault={handleSubmit}>
+                <div class="margins">
+                    <Textfield
+                        input$id="name"
+                        bind:value={clientName}
+                        variant="outlined"
+                        label="Client Name"
+                        aria-controls="client-name"
+                        aria-describedby="client-name-help"
+                        style="width: 100%;"
+                        helperLine$style="width: 100%;"
+                    >
+                        <HelperText id="client-name-help" slot="helper">Friendly name of client / device</HelperText>
+                    </Textfield>
+                </div>
 
-        <div class="margins">
-            <Textfield
-                input$id="notes"
-                textarea
-                bind:value={clientNotes}
-                label="Label"
-                aria-controls="client-notes"
-                style="width: 100%;"
-                helperLine$style="width: 100%;"
-                aria-describedby="client-notes-help"
-            >
-                <HelperText slot="helper" id="client-notes-help">Notes about the client.</HelperText>
-            </Textfield>
-        </div>
-        <div class="margins">
-            <Textfield
-                input$id="allowedIps"
-                style="width: 100%;"
-                helperLine$style="width: 100%;"
-                textarea
-                bind:value={allowedIPsText}
-                label="Allowed IPs"
-            >
-                <HelperText id="client-notes-help" slot="helper"
-                    >Additional allowed CIDR blocks accessible via the client separated by a newline
-                </HelperText>
-            </Textfield>
-        </div>
+                <div class="margins">
+                    <Textfield
+                        input$id="notes"
+                        textarea
+                        bind:value={clientNotes}
+                        label="Label"
+                        aria-controls="client-notes"
+                        style="width: 100%;"
+                        helperLine$style="width: 100%;"
+                        aria-describedby="client-notes-help"
+                    >
+                        <HelperText slot="helper" id="client-notes-help">Notes about the client.</HelperText>
+                    </Textfield>
+                </div>
+                <div class="margins">
+                    <Textfield
+                        input$id="allowedIps"
+                        style="width: 100%;"
+                        helperLine$style="width: 100%;"
+                        textarea
+                        bind:value={allowedIPsText}
+                        label="Allowed IPs"
+                    >
+                        <HelperText id="client-notes-help" slot="helper"
+                            >Additional allowed CIDR blocks accessible via the client separated by a newline
+                        </HelperText>
+                    </Textfield>
+                </div>
 
-        <Button variant="raised"><Label>Save Changes</Label></Button>
-    </form>
+                <Button variant="raised"><Label>Save Changes</Label></Button>
+            </form>
+        </Cell>
+    </LayoutGrid>
 </div>
 
 <div class="container">
@@ -182,9 +196,4 @@
 </div>
 
 <style>
-    .back {
-        position: fixed;
-        left: 10px;
-        top: 70px;
-    }
 </style>

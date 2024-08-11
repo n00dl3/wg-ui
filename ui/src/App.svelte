@@ -1,7 +1,3 @@
-<svelte:head>
-    <title>WireGuard VPN</title>
-</svelte:head>
-
 <script lang="ts">
     import About from "./About.svelte";
     import Clients from "./Clients.svelte";
@@ -14,62 +10,48 @@
     import Cookie from "cookie-universal";
     import {Route, Router} from "svelte-routing";
     import MasterkeyInput from "./MasterkeyInput.svelte";
+    import {keyToHex} from "./lib/keygen";
 
     const cookie = Cookie().get("wguser", {fromRes: true});
-    /*if (window.location.hash) {
-        const password = prompt("Please provide the password to unlock the master key", "") || "";
-        Cipher.unlock(window.location.hash.substring(1), password).then(() => console.log("key unlocked !"))
-    } else {
-        const password = prompt("A new master key will be generated, please provide a password to encrypt it", "");
-        if (!password) {
-            throw new Error("No password provided");
+    let unlocked = Cipher.isUnlocked();
+    const handleUnlock = () => {
+        unlocked = Cipher.isUnlocked();
+        if (unlocked) {
+            window.location.hash = Cipher.wrappedKey ? "#" + keyToHex(Cipher.wrappedKey) : "#";
         }
-        Cipher.init(password).then((key) => {
-            window.location.hash = key;
-        });
-
-    }*/
+    };
     export let user: string;
-    try{
-        const token = parseJwt<{ user: string }>(cookie||'');
+    try {
+        const token = parseJwt<{user: string}>(cookie || "");
         user = token.user;
-    }catch (e) {
+    } catch (e) {
         user = "anonymous";
     }
     export let url = "";
 </script>
 
-<style>
-
-    footer {
-        margin-top: 3em;
-        border-top: 1px solid #ddd;
-        text-align: center;
-
-    }
-</style>
+<svelte:head>
+    <title>WireGuard VPN</title>
+</svelte:head>
 
 <div class="mdc-typography">
-    {#if Cipher.isUnlocked()}
-        <Router url="{url}">
-
-            <Nav user="{user}"/>
-
+    <Router {url}>
+        <Nav {user} />
+        {#if unlocked}
             <main class="container">
                 <div>
-                    <Route path="client/:clientId" component="{EditClient}"/>
-                    <Route path="newclient/" component="{NewClient}"/>
-                    <Route path="about" component="{About}"/>
+                    <Route path="client/:clientId" component={EditClient} />
+                    <Route path="newclient/" component={NewClient} />
+                    <Route path="about" component={About} />
                     <Route path="/">
-                        <Clients user="{user}"/>
+                        <Clients {user} />
                     </Route>
                 </div>
             </main>
-
-        </Router>
-    {:else}
-        <MasterkeyInput/>
-    {/if}
+        {:else}
+            <MasterkeyInput on:unlock={handleUnlock} />
+        {/if}
+    </Router>
 
     <footer>
         <p>
@@ -80,3 +62,11 @@
         </p>
     </footer>
 </div>
+
+<style>
+    footer {
+        margin-top: 3em;
+        border-top: 1px solid #ddd;
+        text-align: center;
+    }
+</style>
