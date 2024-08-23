@@ -1,51 +1,53 @@
 <script lang="ts">
-    import Button, {Icon, Label} from "@smui/button";
+    import Button, { Icon, Label } from "@smui/button";
+    import LayoutGrid, { Cell } from "@smui/layout-grid";
     import Paper from "@smui/paper";
-    import IconButton from "@smui/icon-button";
-    import LayoutGrid, {Cell} from "@smui/layout-grid";
-    import {link, navigate} from "svelte-routing";
-    import {generateConfig} from "./lib/config";
-    import {keyFromHex, keyToBase64, keyToHex} from "./lib/keygen";
-    import type {WGClient} from "./lib/api";
     import QRCode from "qrcode";
+    import { navigate } from "svelte-routing";
+    import type { WGClient } from "./lib/api";
+    import { generateConfig, type PeerConfig } from "./lib/config";
+    import { keyFromHex, keyToBase64 } from "./lib/keygen";
     import Cipher from "./lib/master-key";
     export let peerConfig: WGClient;
     let decipherError = false;
-
+    const config:PeerConfig = {
+        dns: peerConfig.dns,
+        ipAddress: peerConfig.ip,
+        keepAlive: peerConfig.keepAlive,
+        mtu: peerConfig.mtu,
+        name: peerConfig.name,
+        notes: peerConfig.notes,
+        privateKey: "",
+        serverAllowedIps: peerConfig.server.allowedIPs || [],
+        serverEndpoint: peerConfig.server.endpoint,
+        serverPublicKey: peerConfig.server.publicKey,
+        presharedKey: peerConfig.psk ? keyToBase64(keyFromHex(peerConfig.psk)) : undefined,
+    };
+    let privateKey = "";
+    let configuration: string = "";
+    let qrCodeUri = "";
+    let downloadUri = "";
     let hash = 0;
     for (let i = 0; i < peerConfig.publicKey.length; i++) {
         hash = peerConfig.publicKey.charCodeAt(i) + ((hash << 5) - hash);
     }
     const color = `hsl(${hash % 360},50%,95%)`;
-    let privateKey = "";
     Cipher.decrypt(keyFromHex(peerConfig.privateKey))
-    .then((key) => {
-        privateKey = keyToBase64(key);
-        configuration = generateConfig({
-            dns: peerConfig.dns,
-            ipAddress: peerConfig.ip,
-            keepAlive: peerConfig.keepAlive,
-            mtu: peerConfig.mtu,
-            name: peerConfig.name,
-            notes: peerConfig.notes,
-            privateKey: privateKey,
-            serverAllowedIps: peerConfig.allowedIps || [],
-            serverEndpoint: peerConfig.server.endpoint,
-            serverPublicKey: peerConfig.server.publicKey,
-            presharedKey: peerConfig.psk ? keyToBase64(keyFromHex(peerConfig.psk)) : undefined,
+        .then((key) => {
+            privateKey = keyToBase64(key);
+            config.privateKey = privateKey;
         })
-        QRCode.toDataURL(configuration).then((uri) => {
-            qrCodeUri = uri;
-        });
-        downloadUri = "data:text/plain;charset=utf-8," + encodeURIComponent(configuration);
-    }).catch((e) => {
+        .catch((e) => {
             console.error(e);
             decipherError = true;
-        });;
-    let configuration: string = "";
-    let qrCodeUri = "";
-
-    let downloadUri = "";
+        }).finally(()=>{
+            configuration = generateConfig(config);
+            QRCode.toDataURL(configuration).then((uri) => {
+                qrCodeUri = uri;
+            });
+            downloadUri = "data:text/plain;charset=utf-8," + encodeURIComponent(configuration);
+        });
+    
 </script>
 
 <Paper elevation={8} style="background-color: {color}; margin: 2em 0;" class="card">

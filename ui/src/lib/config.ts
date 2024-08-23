@@ -1,6 +1,6 @@
 import * as QRCode from "qrcode";
 
-interface PeerConfig {
+export interface PeerConfig {
     ipAddress: string
     name: string,
     notes: string,
